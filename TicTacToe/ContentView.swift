@@ -8,6 +8,10 @@
 import SwiftUI
 
 
+var hSide: String = ""
+var cSide: String = ""
+
+
 struct ContentView: View {
     
     let columns: [GridItem] = [GridItem(.flexible()),
@@ -17,66 +21,129 @@ struct ContentView: View {
     @State private var moves: [Move?] = Array(repeating:nil, count:9)
     @State private var isGameBoardDisabled = false
     @State private var alertItem: AlertItem?
+    @State var humanSide: String = ""
+    @State var computerSide: String = ""
+    @State private var bgColorOne: Color = Color.black
+    @State private var bgColorTwo: Color = Color.black
+    @State private var fColor: Color = Color.white
+    @State private var sideChosen: Bool = false
+    
+    func changeGameSetting() {
+        print(humanSide)
+        if humanSide == "xmark" {
+            hSide = "xmark"
+            cSide = "circle"
+            bgColorTwo = Color.green
+            bgColorOne = Color.red
+        }else{
+            hSide = "circle"
+            cSide = "xmark"
+            bgColorTwo = Color.red
+            bgColorOne = Color.green
+        }
+        sideChosen = true
+    }
+    
     
     var body: some View {
-        GeometryReader{ geometry in
-            VStack{
-                Spacer()
-                LazyVGrid(columns: columns, spacing:5){
-                    ForEach(0..<9) { i in
-                        ZStack {
-                            Circle()
-                                .foregroundColor(.red).opacity(0.5)
-                                .frame(width:geometry.size.width/3 - 15, height:geometry.size.width/3 - 15)
-                            
-                            Image(systemName: moves[i]?.indicator ?? "")
-                                .resizable()
-                                .frame(width:40, height:40)
-                                .foregroundColor(.white)
-                        }
-                        .onTapGesture {
-                            if isSquareOccupied(in: moves, forIndex: i) {
-                                return
+        HStack {
+            GeometryReader{ geometry in
+                VStack{
+                    Text("choose your side")
+                        .font(.largeTitle)
+                    HStack{
+                        Image(systemName: "circle")
+                            .resizable()
+                            .frame(width:40, height:40)
+                            .foregroundColor(fColor)
+                            .padding()
+                            .background(bgColorOne)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16).stroke(Color.orange, lineWidth: 7)
+                                    .frame(width:78, height: 80)
+                            )
+                            .onTapGesture {
+                                humanSide = "circle"
+                                computerSide = "xmark"
+                                changeGameSetting()
                             }
-                            moves[i] = Move(player: .human, boardIndex: i)
-                            
-                            
-                            if checkWinCondition(for: .human, in: moves) {
-                                alertItem = AlertContext.humanWin
-                                return
-                            }
-                            
-                            if checkForDraw(in: moves) {
-                                alertItem = AlertContext.draw
-                                return
-                            }
-                            isGameBoardDisabled = true
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now()+0.5) {
-                                let compuetrPosition = determineComputerMovePosition(in: moves)
-                                moves[compuetrPosition] = Move(player: .computer, boardIndex: compuetrPosition)
-                                isGameBoardDisabled = false
+                        Spacer()
+                        Image(systemName: "xmark")
+                            .resizable()
+                            .frame(width:40, height:40)
+                            .foregroundColor(fColor)
+                            .padding()
+                            .background(bgColorTwo)
+                            .cornerRadius(20)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16).stroke(Color.orange, lineWidth: 7)
+                                    .frame(width:75, height: 75)
+                            )
+                            .onTapGesture {
+                                humanSide = "xmark"
+                                computerSide = "circle"
+                                changeGameSetting()
+                                print("tapped", humanSide, computerSide)
                                 
-                                if checkWinCondition(for: .computer, in: moves) {
-                                    alertItem = AlertContext.computerWin
+                            }
+                    }
+                    Spacer()
+                    LazyVGrid(columns: columns, spacing:5){
+                        ForEach(0..<9) { i in
+                            ZStack {
+                                Circle()
+                                    .foregroundColor(.red).opacity(0.5)
+                                    .frame(width:geometry.size.width/3 - 15, height:geometry.size.width/3 - 15)
+                                
+                                Image(systemName: moves[i]?.indicator ?? "")
+                                    .resizable()
+                                    .frame(width:40, height:40)
+                                    .foregroundColor(.white)
+                            }
+                            .onTapGesture {
+                                if isSquareOccupied(in: moves, forIndex: i) {
+                                    return
+                                }
+                                moves[i] = Move(player: .human, boardIndex: i)
+                                
+                                
+                                if checkWinCondition(for: .human, in: moves) {
+                                    alertItem = AlertContext.humanWin
                                     return
                                 }
                                 
-                                if checkForDraw(in: moves){
+                                if checkForDraw(in: moves) {
                                     alertItem = AlertContext.draw
                                     return
                                 }
+                                isGameBoardDisabled = true
+                                
+                                DispatchQueue.main.asyncAfter(deadline: .now()+0.5) {
+                                    let compuetrPosition = determineComputerMovePosition(in: moves)
+                                    moves[compuetrPosition] = Move(player: .computer, boardIndex: compuetrPosition)
+                                    isGameBoardDisabled = false
+                                    
+                                    if checkWinCondition(for: .computer, in: moves) {
+                                        alertItem = AlertContext.computerWin
+                                        return
+                                    }
+                                    
+                                    if checkForDraw(in: moves){
+                                        alertItem = AlertContext.draw
+                                        return
+                                    }
+                                }
                             }
                         }
-                    }
+                    }.disabled(!sideChosen)
+                    Spacer()
                 }
-                Spacer()
-            }
-            .disabled(isGameBoardDisabled)
-            .padding()
-            .alert(item: $alertItem) { alertItem in
-                Alert(title: alertItem.title, message: alertItem.message, dismissButton: .default(alertItem.buttonTitle, action: { resetGame() }))
-            }
+                .disabled(isGameBoardDisabled)
+                .padding()
+                .alert(item: $alertItem) { alertItem in
+                    Alert(title: alertItem.title, message: alertItem.message, dismissButton: .default(alertItem.buttonTitle, action: { resetGame() }))
+                }
+            }.background(.gray.opacity(0.4))
         }
     }
     
@@ -145,6 +212,12 @@ struct ContentView: View {
     
     func resetGame () {
         moves = Array(repeating:nil, count:9)
+        humanSide = ""
+        computerSide = ""
+        bgColorOne = Color.black
+        bgColorTwo = Color.black
+        fColor = Color.white
+        sideChosen = false
     }
 }
 
@@ -159,7 +232,7 @@ struct Move {
     let boardIndex: Int
     
     var indicator: String {
-        return player == .human ? "xmark" : "circle"
+        return player == .human ? hSide : cSide
     }
 }
 
